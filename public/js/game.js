@@ -294,11 +294,6 @@
     soundFX.playCrash(data.intensity);
   });
 
-  socket.on('engineStall', (data) => {
-    soundFX.playCrash(1.2);
-    spawnSparks(data.x, data.y, 20);
-  });
-
   socket.on('raceFinished', (data) => {
     gameState = 'finished';
     winnerModal.style.display = 'flex';
@@ -847,13 +842,8 @@
       posValue.textContent = myPosition === 1 ? '1ST' : '2ND';
       posValue.className = `pos-badge pos-${myPosition}`;
 
-      // Breakdown Warning for player
-      const breakdownEl = document.getElementById('breakdown-alert');
       if (me.isEngineBroken) {
-        if (breakdownEl) breakdownEl.style.display = 'block';
         soundFX.updateEngine(0, 8.8, false);
-      } else {
-        if (breakdownEl) breakdownEl.style.display = 'none';
       }
 
       // Boost Fuel Bar

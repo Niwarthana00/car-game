@@ -1,4 +1,4 @@
-// sharedTrack.js - High-Speed Super Speedway Circuit (Gentle curves, huge straights!)
+// sharedTrack.js - High-Speed Pure Straightaway Circuit (Long flat straights, easy rounded corners)
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
     module.exports = factory();
@@ -9,25 +9,27 @@
 
   const WORLD_WIDTH = 2600;
   const WORLD_HEIGHT = 1500;
-  const ROAD_WIDTH = 220; // Extra wide road for easy driving, bumping, and overtaking!
+  const ROAD_WIDTH = 230; // Extra wide road for super easy driving!
   const HALF_ROAD = ROAD_WIDTH / 2;
 
-  // Super Speedway Track Layout:
-  // Huge main straight + gentle wide sweeping right turn + long back straight + gentle wide left turn!
+  // Pure Straightaway Speedway Layout:
+  // - Bottom is a 100% horizontal flat straight (y = 1100)
+  // - Top is a 100% horizontal flat straight (y = 400)
+  // - Left & Right are smooth, gentle rounded 180 corners!
   const waypoints = [
-    { x: 600,  y: 1150 }, // 0: Start / Finish Line
-    { x: 1100, y: 1150 }, // 1: Main straight fast
-    { x: 1650, y: 1150 }, // 2: Main straight exit
-    { x: 2100, y: 1080 }, // 3: Turn 1 gentle entry
-    { x: 2360, y: 880  }, // 4: Turn 1-2 wide apex
-    { x: 2360, y: 620  }, // 5: Turn 2 exit
-    { x: 2100, y: 420  }, // 6: Onto back straight
-    { x: 1650, y: 350  }, // 7: Back straight fast
-    { x: 1100, y: 350  }, // 8: Back straight speed zone
-    { x: 600,  y: 350  }, // 9: Back straight braking zone
-    { x: 300,  y: 450  }, // 10: Turn 3 gentle entry
-    { x: 140,  y: 750  }, // 11: Turn 3-4 wide apex
-    { x: 280,  y: 1050 }  // 12: Turn 4 exit to main straight
+    { x: 1300, y: 1100 }, // 0: Start / Finish Line (Dead-center of the flat bottom straight!)
+    { x: 1750, y: 1100 }, // 1: Flat straight continuing east
+    { x: 2150, y: 1100 }, // 2: Approaching gentle turn
+    { x: 2380, y: 1000 }, // 3: Turn 1 gentle right entry
+    { x: 2470, y: 750  }, // 4: Turn 1-2 smooth apex
+    { x: 2380, y: 500  }, // 5: Turn 2 gentle right exit
+    { x: 2150, y: 400  }, // 6: Onto flat top straight
+    { x: 1300, y: 400  }, // 7: Dead-center of flat top straight
+    { x: 450,  y: 400  }, // 8: Approaching gentle left turn
+    { x: 220,  y: 500  }, // 9: Turn 3 gentle entry
+    { x: 130,  y: 750  }, // 10: Turn 3-4 smooth apex
+    { x: 220,  y: 1000 }, // 11: Turn 4 gentle exit
+    { x: 450,  y: 1100 }  // 12: Back onto flat bottom straight!
   ];
 
   // Catmull-Rom spline interpolation
@@ -42,7 +44,7 @@
   }
 
   // Generate smooth high-res centerline points
-  const SAMPLES_PER_SEGMENT = 28;
+  const SAMPLES_PER_SEGMENT = 30;
   const centerPoints = [];
 
   for (let i = 0; i < waypoints.length; i++) {
@@ -89,7 +91,7 @@
     });
   }
 
-  // Checkpoints: 6 checkpoints evenly placed around this high-speed speedway
+  // Checkpoints: 6 checkpoints (Start/Finish is dead-center of bottom straight)
   const NUM_CHECKPOINTS = 6;
   const checkpoints = [];
   const step = Math.floor(centerPoints.length / NUM_CHECKPOINTS);
@@ -103,31 +105,30 @@
       name: c === 0 ? 'START/FINISH' : `CP ${c}`,
       center: pt,
       idx: idx,
-      x1: pt.x - norm.nx * (HALF_ROAD + 30),
-      y1: pt.y - norm.ny * (HALF_ROAD + 30),
-      x2: pt.x + norm.nx * (HALF_ROAD + 30),
-      y2: pt.y + norm.ny * (HALF_ROAD + 30),
+      x1: pt.x - norm.nx * (HALF_ROAD + 35),
+      y1: pt.y - norm.ny * (HALF_ROAD + 35),
+      x2: pt.x + norm.nx * (HALF_ROAD + 35),
+      y2: pt.y + norm.ny * (HALF_ROAD + 35),
       tx: norm.tx,
       ty: norm.ty,
-      radius: HALF_ROAD + 40
+      radius: HALF_ROAD + 45
     });
   }
 
-  // Starting grid positions (Behind Start/Finish line)
-  const startNorm = trackNormals[0];
-  const startDir = { x: startNorm.tx, y: startNorm.ty };
-  const cp0 = checkpoints[0].center;
+  // Starting grid positions (Placed behind Start/Finish on the flat bottom straight)
+  // Facing exactly East (angle = 0)
+  const cp0 = checkpoints[0].center; // around (1300, 1100)
 
   const startPositions = [
     {
-      x: cp0.x - startDir.x * 120 - startNorm.nx * 45,
-      y: cp0.y - startDir.y * 120 - startNorm.ny * 45,
-      angle: Math.atan2(startDir.y, startDir.x)
+      x: cp0.x - 140,
+      y: cp0.y - 45,
+      angle: 0
     },
     {
-      x: cp0.x - startDir.x * 190 + startNorm.nx * 45,
-      y: cp0.y - startDir.y * 190 + startNorm.ny * 45,
-      angle: Math.atan2(startDir.y, startDir.x)
+      x: cp0.x - 220,
+      y: cp0.y + 45,
+      angle: 0
     }
   ];
 

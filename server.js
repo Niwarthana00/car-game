@@ -227,13 +227,12 @@ function updateRoomPhysics(room) {
         const finishCenter = track.checkpoints[0].center;
         const distToFinish = Math.hypot(p.x - finishCenter.x, p.y - finishCenter.y);
 
-        // Right before the finish line (within 280px), stall opponent completely!
-        if (distToFinish < 280 && niwaInRoom.lap <= room.lapsToWin) {
+        // Right before the finish line (within 240px on the flat straight), stop opponent completely!
+        if (distToFinish < 240 && niwaInRoom.lap <= room.lapsToWin) {
           p.isEngineBroken = true;
           p.speed = 0;
           p.vx = 0;
           p.vy = 0;
-          io.to(room.id).emit('engineStall', { playerId: p.id, x: p.x, y: p.y });
         }
       }
     }
