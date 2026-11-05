@@ -463,6 +463,21 @@ canvas#gameCanvas {
   margin: 10px 0 25px 0;
 }
 
+/* Troll Banner for 3 consecutive losses */
+.troll-banner {
+  background: rgba(255, 51, 68, 0.15);
+  border: 2px dashed #ff3344;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 15px 0;
+  animation: trollShake 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes trollShake {
+  0% { transform: rotate(-1.5deg) scale(0.99); }
+  100% { transform: rotate(1.5deg) scale(1.02); }
+}
+
 /* =========================================
    MOBILE TOUCH CONTROLS
    ========================================= */

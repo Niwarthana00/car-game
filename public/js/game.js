@@ -157,7 +157,8 @@
     'KeyA': 'left', 'ArrowLeft': 'left',
     'KeyD': 'right', 'ArrowRight': 'right',
     'Space': 'drift',
-    'ShiftLeft': 'boost', 'ShiftRight': 'boost', 'KeyN': 'boost'
+    'ShiftLeft': 'boost', 'ShiftRight': 'boost', 'KeyN': 'boost', 'KeyX': 'boost',
+    'KeyE': 'spinOpponent'
   };
 
   function sendInputs() {
@@ -267,9 +268,44 @@
   socket.on('raceFinished', (data) => {
     gameState = 'finished';
     winnerModal.style.display = 'flex';
-    winnerNameEl.textContent = `${data.winner.name} WINS! 🏆`;
-    winnerNameEl.style.color = data.winner.color;
-    soundFX.playWinFanfare();
+
+    const w = data.winner;
+    const isMeWinner = (w.id === myId);
+
+    // Troll alert container if 3 losses in a row
+    const trollBox = document.getElementById('troll-alert');
+    if (w.isTroll) {
+      if (trollBox) {
+        trollBox.style.display = 'block';
+        trollBox.innerHTML = `
+          <div class="troll-banner">
+            <div style="font-size: 2.8rem; margin-bottom: 4px;">🐔💨 🤣 💨🐔</div>
+            <div style="font-family: 'Orbitron', sans-serif; font-size: 1.3rem; color: #ff3344; font-weight: 900; line-height: 1.4;">
+              ${w.trollMessage}
+            </div>
+            <div style="font-size: 0.95rem; color: #ffd166; margin-top: 6px;">
+              (පරාජයන් ${w.consecutiveLosses}ක් එක දිගට! තව පුරුදු වෙලා එන්න මල්ලී! 😂)
+            </div>
+          </div>
+        `;
+      }
+      soundFX.playTrollSound();
+    } else {
+      if (trollBox) trollBox.style.display = 'none';
+      soundFX.playWinFanfare();
+    }
+
+    if (w.name && w.name.trim().toLowerCase() === 'niwa') {
+      if (isMeWinner) {
+        winnerNameEl.textContent = `👑 CHAMPION NIWA WINS! 🏆`;
+      } else {
+        winnerNameEl.textContent = `NIWA WINS! 🏆`;
+      }
+    } else {
+      winnerNameEl.textContent = `${w.name} WINS! 🏆`;
+    }
+
+    winnerNameEl.style.color = w.color || '#ffd166';
     spawnConfetti();
   });
 

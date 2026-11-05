@@ -253,6 +253,31 @@ class SoundFX {
     osc.stop(t + 0.25);
   }
 
+  // Funny Troll "Huuu Huuuu" / Sad trombone sound
+  playTrollSound() {
+    if (!this.ctx || this.muted) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+
+    const t = this.ctx.currentTime;
+    // Funny descending sad trombone slide
+    const notes = [330, 311.13, 293.66, 261.63];
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, t + idx * 0.35);
+      osc.frequency.linearRampToValueAtTime(freq - 15, t + idx * 0.35 + 0.3);
+
+      gain.gain.setValueAtTime(0.3, t + idx * 0.35);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.35 + 0.35);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(t + idx * 0.35);
+      osc.stop(t + idx * 0.35 + 0.35);
+    });
+  }
+
   // Win fanfare
   playWinFanfare() {
     if (!this.ctx || this.muted) return;

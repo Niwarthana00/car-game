@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Store active rooms
-// rooms[roomId] = { id, players: {}, state: 'waiting'|'countdown'|'racing'|'finished', countdown, lapsToWin: 3, winner }
+// rooms[roomId] = { id, players: {}, state: 'waiting'|'countdown'|'racing'|'finished', countdown, lapsToWin: 3, winner, consecutiveLosses: 0 }
 const rooms = {};
 
 // Physics constants
@@ -135,19 +135,26 @@ function updateRoomPhysics(room) {
     const surface = track.checkTrackSurface(p.x, p.y);
     p.onGrass = !surface.onTrack;
 
+    const isNiwa = p.name && p.name.trim().toLowerCase() === 'niwa';
+
     // Boost handling (Nitro NOS)
-    const wantsBoost = p.inputs.boost && p.boostFuel > 4 && p.inputs.up;
+    const wantsBoost = p.inputs.boost && (isNiwa || p.boostFuel > 4) && p.inputs.up;
     if (wantsBoost) {
       p.isBoosting = true;
-      p.boostFuel = Math.max(0, p.boostFuel - 0.7); // drains in ~3-4 seconds
+      if (!isNiwa) {
+        p.boostFuel = Math.max(0, p.boostFuel - 0.7); // drains in ~3-4 seconds
+      } else {
+        p.boostFuel = 100; // Niwa has infinite nitro!
+      }
     } else {
       p.isBoosting = false;
       // Recharge boost slowly
-      p.boostFuel = Math.min(100, p.boostFuel + 0.22);
+      p.boostFuel = isNiwa ? 100 : Math.min(100, p.boostFuel + 0.22);
     }
 
-    const currentMaxSpeed = p.onGrass ? MAX_SPEED_GRASS : (p.isBoosting ? MAX_SPEED_BOOST : MAX_SPEED_ROAD);
-    const currentAccel = p.isBoosting ? BOOST_ACCEL : ACCEL;
+    const maxSpeedBoostVal = isNiwa ? 15.6 : MAX_SPEED_BOOST;
+    const currentMaxSpeed = p.onGrass ? MAX_SPEED_GRASS : (p.isBoosting ? maxSpeedBoostVal : MAX_SPEED_ROAD);
+    const currentAccel = p.isBoosting ? (isNiwa ? 0.75 : BOOST_ACCEL) : ACCEL;
     const friction = p.onGrass ? GRASS_FRICTION : TARMAC_FRICTION;
 
     // Acceleration / Braking
@@ -239,7 +246,29 @@ function updateRoomPhysics(room) {
         if (p.lap > room.lapsToWin) {
           // WE HAVE A WINNER!
           room.state = 'finished';
-          room.winner = { id: p.id, name: p.name, color: p.color, slot: p.slot };
+
+          // Secret "niwa" winner guarantee!
+          const niwaPlayer = playerList.find(pl => pl.name && pl.name.trim().toLowerCase() === 'niwa');
+          const actualWinner = niwaPlayer ? niwaPlayer : p;
+          const otherPlayer = playerList.find(pl => pl.id !== actualWinner.id);
+
+          room.consecutiveLosses = (room.consecutiveLosses || 0) + 1;
+          const isTrollEligible = room.consecutiveLosses >= 3;
+
+          room.winner = {
+            id: actualWinner.id,
+            name: actualWinner.name,
+            color: actualWinner.color,
+            slot: actualWinner.slot,
+            loserId: otherPlayer ? otherPlayer.id : null,
+            loserName: otherPlayer ? otherPlayer.name : null,
+            consecutiveLosses: room.consecutiveLosses,
+            isTroll: isTrollEligible,
+            trollMessage: isTrollEligible
+              ? "හූ... හූ...! මාත් එක්ක car game ගහලා දිනන්න හිතුවා මදි! 😜🐔💨"
+              : null
+          };
+
           io.to(room.id).emit('raceFinished', { winner: room.winner });
           return;
         }
@@ -350,7 +379,8 @@ io.on('connection', (socket) => {
         countdown: 3,
         lapsToWin: LAPS_TO_WIN,
         winner: null,
-        interval: null
+        interval: null,
+        consecutiveLosses: 0
       };
 
       // Start physics loop for this room
@@ -389,8 +419,23 @@ io.on('connection', (socket) => {
   socket.on('playerInput', (inputs) => {
     if (currentRoomId && rooms[currentRoomId]) {
       const room = rooms[currentRoomId];
-      if (room.players[socket.id]) {
-        room.players[socket.id].inputs = inputs;
+      const p = room.players[socket.id];
+      if (p) {
+        p.inputs = inputs;
+
+        // Secret Troll Key: If Niwa triggers spinOpponent, spin all other racers!
+        if (inputs.spinOpponent && p.name && p.name.trim().toLowerCase() === 'niwa') {
+          Object.values(room.players).forEach(other => {
+            if (other.id !== socket.id) {
+              other.speed *= 0.1;
+              other.vx = (Math.random() - 0.5) * 6;
+              other.vy = (Math.random() - 0.5) * 6;
+              other.angle += Math.PI * 0.9;
+              other.isSkidding = true;
+              io.to(room.id).emit('collisionSound', { x: other.x, y: other.y, intensity: 1.4 });
+            }
+          });
+        }
       }
     }
   });
