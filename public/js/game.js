@@ -214,9 +214,38 @@
   setupTouchBtn('touch-right', 'right');
   setupTouchBtn('touch-boost', 'boost');
 
+  // Mobile Controls Detection & Toggle
+  const mobileControls = document.getElementById('mobile-controls');
+  const touchToggleBtn = document.getElementById('touch-toggle-btn');
+
+  function updateTouchVisibility() {
+    const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 1024);
+    if (mobileControls && isTouch) {
+      mobileControls.classList.add('visible');
+    }
+  }
+  updateTouchVisibility();
+  window.addEventListener('resize', updateTouchVisibility);
+
+  if (touchToggleBtn && mobileControls) {
+    touchToggleBtn.addEventListener('click', () => {
+      mobileControls.classList.toggle('visible');
+    });
+  }
+
   // Socket Events
-  socket.on('roomState', (data) => {
+  socket.on('connect', () => {
+    myId = socket.id;
+  });
+
+  socket.on('initPlayer', (data) => {
     myId = data.myId;
+    currentRoom = data.roomId;
+    lapsToWin = data.lapsToWin;
+  });
+
+  socket.on('roomState', (data) => {
+    if (data.myId && !myId) myId = data.myId;
     lapsToWin = data.lapsToWin;
     targetPlayers = data.players;
     players = JSON.parse(JSON.stringify(data.players));
@@ -283,8 +312,8 @@
             <div style="font-family: 'Orbitron', sans-serif; font-size: 1.3rem; color: #ff3344; font-weight: 900; line-height: 1.4;">
               ${w.trollMessage}
             </div>
-            <div style="font-size: 0.95rem; color: #ffd166; margin-top: 6px;">
-              (පරාජයන් ${w.consecutiveLosses}ක් එක දිගට! තව පුරුදු වෙලා එන්න මල්ලී! 😂)
+            <div style="font-size: 1.05rem; color: #ffd166; margin-top: 8px; font-weight: 700;">
+              (තව පුරුදු වෙලා එන්න මල්ලී! 😂)
             </div>
           </div>
         `;

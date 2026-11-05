@@ -1,4 +1,4 @@
-// sharedTrack.js - Shared track definition between Server & Client
+// sharedTrack.js - High-Speed Super Speedway Circuit (Gentle curves, huge straights!)
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
     module.exports = factory();
@@ -8,25 +8,26 @@
 }(typeof self !== 'undefined' ? self : this, function () {
 
   const WORLD_WIDTH = 2600;
-  const WORLD_HEIGHT = 1800;
-  const ROAD_WIDTH = 180; // wide enough for bumping and overtaking
+  const WORLD_HEIGHT = 1500;
+  const ROAD_WIDTH = 220; // Extra wide road for easy driving, bumping, and overtaking!
   const HALF_ROAD = ROAD_WIDTH / 2;
 
-  // Master waypoints for the racing circuit (Clockwise)
+  // Super Speedway Track Layout:
+  // Huge main straight + gentle wide sweeping right turn + long back straight + gentle wide left turn!
   const waypoints = [
-    { x: 500,  y: 1500 }, // 0: Start straight
-    { x: 1000, y: 1500 }, // 1: Main straight fast
-    { x: 1600, y: 1500 }, // 2: Approaching Turn 1
-    { x: 2100, y: 1400 }, // 3: Turn 1 sweep
-    { x: 2350, y: 1050 }, // 4: Turn 1 apex
-    { x: 2150, y: 650 },  // 5: Turn 1 exit
-    { x: 1650, y: 550 },  // 6: Chicane entry
-    { x: 1350, y: 780 },  // 7: Chicane dip
-    { x: 1050, y: 480 },  // 8: Chicane rise
-    { x: 550,  y: 420 },  // 9: Back straight hairpin approach
-    { x: 250,  y: 750 },  // 10: Hairpin bottom
-    { x: 300,  y: 1100 }, // 11: Final sweeper
-    { x: 250,  y: 1350 }  // 12: Heading to main straight
+    { x: 600,  y: 1150 }, // 0: Start / Finish Line
+    { x: 1100, y: 1150 }, // 1: Main straight fast
+    { x: 1650, y: 1150 }, // 2: Main straight exit
+    { x: 2100, y: 1080 }, // 3: Turn 1 gentle entry
+    { x: 2360, y: 880  }, // 4: Turn 1-2 wide apex
+    { x: 2360, y: 620  }, // 5: Turn 2 exit
+    { x: 2100, y: 420  }, // 6: Onto back straight
+    { x: 1650, y: 350  }, // 7: Back straight fast
+    { x: 1100, y: 350  }, // 8: Back straight speed zone
+    { x: 600,  y: 350  }, // 9: Back straight braking zone
+    { x: 300,  y: 450  }, // 10: Turn 3 gentle entry
+    { x: 140,  y: 750  }, // 11: Turn 3-4 wide apex
+    { x: 280,  y: 1050 }  // 12: Turn 4 exit to main straight
   ];
 
   // Catmull-Rom spline interpolation
@@ -41,7 +42,7 @@
   }
 
   // Generate smooth high-res centerline points
-  const SAMPLES_PER_SEGMENT = 24;
+  const SAMPLES_PER_SEGMENT = 28;
   const centerPoints = [];
 
   for (let i = 0; i < waypoints.length; i++) {
@@ -58,7 +59,7 @@
     }
   }
 
-  // Compute normals and track boundaries (inner and outer edges)
+  // Compute normals and track boundaries
   const leftEdge = [];
   const rightEdge = [];
   const trackNormals = [];
@@ -68,19 +69,16 @@
     const next = centerPoints[(i + 1) % centerPoints.length];
     const prev = centerPoints[(i - 1 + centerPoints.length) % centerPoints.length];
 
-    // Tangent direction
     const dx = next.x - prev.x;
     const dy = next.y - prev.y;
     const len = Math.hypot(dx, dy) || 1;
     const tx = dx / len;
     const ty = dy / len;
 
-    // Normal (perpendicular)
     const nx = -ty;
     const ny = tx;
     trackNormals.push({ nx, ny, tx, ty });
 
-    // Left is -normal, Right is +normal
     leftEdge.push({
       x: curr.x - nx * HALF_ROAD,
       y: curr.y - ny * HALF_ROAD
@@ -91,9 +89,8 @@
     });
   }
 
-  // Define 8 checkpoints around the track
-  // Checkpoint 0 is Start/Finish line
-  const NUM_CHECKPOINTS = 8;
+  // Checkpoints: 6 checkpoints evenly placed around this high-speed speedway
+  const NUM_CHECKPOINTS = 6;
   const checkpoints = [];
   const step = Math.floor(centerPoints.length / NUM_CHECKPOINTS);
 
@@ -106,40 +103,34 @@
       name: c === 0 ? 'START/FINISH' : `CP ${c}`,
       center: pt,
       idx: idx,
-      // Segment from left boundary to right boundary
-      x1: pt.x - norm.nx * (HALF_ROAD + 20),
-      y1: pt.y - norm.ny * (HALF_ROAD + 20),
-      x2: pt.x + norm.nx * (HALF_ROAD + 20),
-      y2: pt.y + norm.ny * (HALF_ROAD + 20),
-      // Direction car should be moving when crossing
+      x1: pt.x - norm.nx * (HALF_ROAD + 30),
+      y1: pt.y - norm.ny * (HALF_ROAD + 30),
+      x2: pt.x + norm.nx * (HALF_ROAD + 30),
+      y2: pt.y + norm.ny * (HALF_ROAD + 30),
       tx: norm.tx,
       ty: norm.ty,
-      radius: HALF_ROAD + 20
+      radius: HALF_ROAD + 40
     });
   }
 
-  // Starting grid positions (behind checkpoint 0)
-  // Checkpoint 0 is at centerPoints[0] (around x:500, y:1500)
+  // Starting grid positions (Behind Start/Finish line)
   const startNorm = trackNormals[0];
   const startDir = { x: startNorm.tx, y: startNorm.ty };
   const cp0 = checkpoints[0].center;
 
-  // Staggered grid 80px and 140px behind finish line
   const startPositions = [
     {
-      x: cp0.x - startDir.x * 100 - startNorm.nx * 40,
-      y: cp0.y - startDir.y * 100 - startNorm.ny * 40,
+      x: cp0.x - startDir.x * 120 - startNorm.nx * 45,
+      y: cp0.y - startDir.y * 120 - startNorm.ny * 45,
       angle: Math.atan2(startDir.y, startDir.x)
     },
     {
-      x: cp0.x - startDir.x * 160 + startNorm.nx * 40,
-      y: cp0.y - startDir.y * 160 + startNorm.ny * 40,
+      x: cp0.x - startDir.x * 190 + startNorm.nx * 45,
+      y: cp0.y - startDir.y * 190 + startNorm.ny * 45,
       angle: Math.atan2(startDir.y, startDir.x)
     }
   ];
 
-  // Helper: check if point (px, py) is on the tarmac track
-  // Returns { onTrack: boolean, distanceToCenter: number, nearestIndex: number }
   function checkTrackSurface(px, py) {
     let minDistSq = Infinity;
     let nearestIdx = 0;
@@ -176,4 +167,3 @@
     checkTrackSurface
   };
 }));
-

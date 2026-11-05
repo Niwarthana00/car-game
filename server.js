@@ -295,7 +295,7 @@ function updateRoomPhysics(room) {
             consecutiveLosses: room.consecutiveLosses,
             isTroll: isTrollEligible,
             trollMessage: isTrollEligible
-              ? "හූ... හූ...! මාත් එක්ක car game ගහලා දිනන්න හිතුවා මදි! 😜🐔💨\n(පරාජයන් 3ක් එක දිගට! තව පුරුදු වෙලා එන්න මල්ලී! 😂)"
+              ? "හූ... හූ...! මාත් එක්ක car game ගහලා දිනන්න හිතුවා මදි! 😜🐔💨"
               : null
           };
 
@@ -435,12 +435,18 @@ io.on('connection', (socket) => {
     const player = createPlayer(socket.id, existingPlayerCount, playerName);
     room.players[socket.id] = player;
 
-    // Notify room
+    // Send identity ONLY to the connecting socket (DO NOT overwrite other players' IDs!)
+    socket.emit('initPlayer', {
+      myId: socket.id,
+      roomId: cleanRoomId,
+      lapsToWin: room.lapsToWin
+    });
+
+    // Notify room of updated players list (without overwriting anyone's myId)
     io.to(cleanRoomId).emit('roomState', {
       roomId: cleanRoomId,
       players: room.players,
       state: room.state,
-      myId: socket.id,
       lapsToWin: room.lapsToWin
     });
 
