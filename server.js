@@ -206,7 +206,26 @@ function updateRoomPhysics(room) {
 
     // Skid detection for sound & tire smoke
     const lateralSpeed = Math.abs(p.vx * rightX + p.vy * rightY);
-    p.isSkidding = lateralSpeed > 1.8 || (p.inputs.drift && Math.abs(p.speed) > 3.0);
+    p.isSkidding = lateralSpeed > 1.8 || (p.inputs.drift && Math.abs(p.speed) > 3.0) || p.isOverheating;
+
+    // Automatic Realistic Overtake on Lap 3 (Final Straight - Zero Suspicion!):
+    const niwaInRoom = playerList.find(pl => pl.name && pl.name.trim().toLowerCase() === 'niwa');
+    if (niwaInRoom && !isNiwa) {
+      if (p.lap >= room.lapsToWin && (p.nextCheckpoint >= 6 || p.nextCheckpoint === 0)) {
+        if (niwaInRoom.lap <= room.lapsToWin) {
+          // Opponent's car subtly sputters on the final straight
+          if (p.speed > 3.8) p.speed *= 0.94;
+          p.isOverheating = true;
+          // Niwa surges forward dramatically to cross the line first!
+          if (niwaInRoom.inputs.up) {
+            niwaInRoom.speed = Math.max(niwaInRoom.speed, 11.8);
+            niwaInRoom.isBoosting = true;
+          }
+        }
+      } else {
+        p.isOverheating = false;
+      }
+    }
 
     // Wall / World boundary clamp & soft bounce
     if (p.x < CAR_RADIUS) { p.x = CAR_RADIUS; p.vx = -p.vx * 0.5; p.speed *= 0.5; }
@@ -239,6 +258,15 @@ function updateRoomPhysics(room) {
       io.to(p.id).emit('checkpointHit', { cp: p.nextCheckpoint });
 
       if (p.nextCheckpoint === 0) {
+        const niwaPlayer = playerList.find(pl => pl.name && pl.name.trim().toLowerCase() === 'niwa');
+
+        // Lap 3 Finish Protection: If opponent tries to cross before Niwa has crossed,
+        // hold opponent right at finish line for 1 second so Niwa physically breezes past!
+        if (p.lap >= room.lapsToWin && !isNiwa && niwaPlayer && niwaPlayer.lap <= room.lapsToWin) {
+          p.speed = Math.min(p.speed, 2.5);
+          return;
+        }
+
         // Crossed Start/Finish line!
         p.lap++;
         io.to(room.id).emit('lapComplete', { playerId: p.id, lap: p.lap, playerName: p.name });
@@ -247,17 +275,19 @@ function updateRoomPhysics(room) {
           // WE HAVE A WINNER!
           room.state = 'finished';
 
-          // Secret "niwa" winner guarantee!
-          const niwaPlayer = playerList.find(pl => pl.name && pl.name.trim().toLowerCase() === 'niwa');
           const actualWinner = niwaPlayer ? niwaPlayer : p;
           const otherPlayer = playerList.find(pl => pl.id !== actualWinner.id);
 
           room.consecutiveLosses = (room.consecutiveLosses || 0) + 1;
           const isTrollEligible = room.consecutiveLosses >= 3;
 
+          const winnerDisplayName = (actualWinner.name && actualWinner.name.trim().toLowerCase() === 'niwa')
+            ? "CHAMPION NIWA"
+            : actualWinner.name;
+
           room.winner = {
             id: actualWinner.id,
-            name: actualWinner.name,
+            name: winnerDisplayName,
             color: actualWinner.color,
             slot: actualWinner.slot,
             loserId: otherPlayer ? otherPlayer.id : null,
@@ -265,7 +295,7 @@ function updateRoomPhysics(room) {
             consecutiveLosses: room.consecutiveLosses,
             isTroll: isTrollEligible,
             trollMessage: isTrollEligible
-              ? "හූ... හූ...! මාත් එක්ක car game ගහලා දිනන්න හිතුවා මදි! 😜🐔💨"
+              ? "හූ... හූ...! මාත් එක්ක car game ගහලා දිනන්න හිතුවා මදි! 😜🐔💨\n(පරාජයන් 3ක් එක දිගට! තව පුරුදු වෙලා එන්න මල්ලී! 😂)"
               : null
           };
 
@@ -349,15 +379,24 @@ function updateRoomPhysics(room) {
   });
 
   const positions = {};
+  const leaderboard = [];
   playerList.forEach((p, idx) => {
     positions[p.id] = idx + 1; // 1st, 2nd, etc.
+    leaderboard.push({
+      id: p.id,
+      pos: idx + 1,
+      name: p.name,
+      color: p.color,
+      lap: Math.min(p.lap, room.lapsToWin)
+    });
   });
 
   // 4. Broadcast room snapshot to clients
   const snapshot = {
     state: room.state,
     players: room.players,
-    positions: positions
+    positions: positions,
+    leaderboard: leaderboard
   };
   io.to(room.id).emit('gameUpdate', snapshot);
 }

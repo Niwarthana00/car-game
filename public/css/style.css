@@ -259,6 +259,94 @@ canvas#gameCanvas {
   gap: 10px;
 }
 
+/* Live Standings Widget (Left Side) */
+.live-standings {
+  position: absolute;
+  top: 95px;
+  left: 30px;
+  background: rgba(13, 17, 23, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 10px 14px;
+  backdrop-filter: blur(6px);
+  min-width: 195px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.standings-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #8b949e;
+  letter-spacing: 1.5px;
+  margin-bottom: 8px;
+}
+
+.standings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.standing-row {
+  display: flex;
+  align-items: center;
+  background: rgba(22, 27, 34, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 6px 10px;
+  gap: 8px;
+  transition: transform 0.25s ease, background 0.2s;
+}
+
+.standing-row.rank-1 {
+  border-color: rgba(255, 209, 102, 0.4);
+  background: rgba(255, 209, 102, 0.12);
+}
+
+.standing-pos {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 900;
+  width: 18px;
+  text-align: center;
+}
+
+.standing-row.rank-1 .standing-pos {
+  color: #ffd166;
+}
+
+.standing-row.rank-2 .standing-pos {
+  color: #8b949e;
+}
+
+.standing-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid #fff;
+}
+
+.standing-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90px;
+}
+
+.standing-lap {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.75rem;
+  color: #58a6ff;
+  font-weight: 700;
+  background: #21262d;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
 .hud-pill {
   background: rgba(13, 17, 23, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.12);

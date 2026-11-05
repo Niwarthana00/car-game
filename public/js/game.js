@@ -295,12 +295,8 @@
       soundFX.playWinFanfare();
     }
 
-    if (w.name && w.name.trim().toLowerCase() === 'niwa') {
-      if (isMeWinner) {
-        winnerNameEl.textContent = `👑 CHAMPION NIWA WINS! 🏆`;
-      } else {
-        winnerNameEl.textContent = `NIWA WINS! 🏆`;
-      }
+    if (w.name && (w.name.trim().toLowerCase() === 'niwa' || w.name.includes('NIWA'))) {
+      winnerNameEl.textContent = `👑 CHAMPION NIWA WINS! 🏆`;
     } else {
       winnerNameEl.textContent = `${w.name} WINS! 🏆`;
     }
@@ -315,6 +311,19 @@
 
     if (snapshot.positions && snapshot.positions[myId]) {
       myPosition = snapshot.positions[myId];
+    }
+
+    // Dynamic Live Leaderboard (auto-swaps 1st and 2nd in real-time!)
+    const standingsList = document.getElementById('standings-list');
+    if (standingsList && snapshot.leaderboard) {
+      standingsList.innerHTML = snapshot.leaderboard.map(r => `
+        <div class="standing-row rank-${r.pos}">
+          <span class="standing-pos">${r.pos}</span>
+          <span class="standing-dot" style="background: ${r.color}"></span>
+          <span class="standing-name">${r.id === myId ? `YOU (${r.name})` : r.name}</span>
+          <span class="standing-lap">L${r.lap}</span>
+        </div>
+      `).join('');
     }
 
     updateWaitingState();
