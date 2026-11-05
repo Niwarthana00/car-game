@@ -500,6 +500,44 @@ canvas#gameCanvas {
   transform: translate(-50%, -50%) scale(1.15);
 }
 
+/* Breakdown Alert */
+.breakdown-alert {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(180, 20, 30, 0.92);
+  border: 2px solid #ff3344;
+  box-shadow: 0 0 35px rgba(255, 51, 68, 0.7);
+  border-radius: 14px;
+  padding: 16px 28px;
+  text-align: center;
+  backdrop-filter: blur(8px);
+  z-index: 95;
+  animation: breakdownPulse 0.5s infinite alternate;
+}
+
+@keyframes breakdownPulse {
+  0% { transform: translate(-50%, -50%) scale(0.97); }
+  100% { transform: translate(-50%, -50%) scale(1.03); }
+}
+
+.bd-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #ffd166;
+  text-shadow: 0 0 10px rgba(255, 209, 102, 0.8);
+}
+
+.bd-subtitle {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  margin-top: 4px;
+}
+
 /* =========================================
    WINNER / GAME OVER MODAL
    ========================================= */

@@ -78,6 +78,7 @@ function createPlayer(socketId, slotIndex, name) {
     onGrass: false,
     isSkidding: false,
     isBoosting: false,
+    isEngineBroken: false,
     boostFuel: 100, // 0 to 100%
     inputs: { up: false, down: false, left: false, right: false, drift: false, boost: false }
   };
@@ -99,6 +100,7 @@ function resetRoomPositions(room) {
     p.checkpointsPassed = 1;
     p.totalProgress = 1;
     p.isBoosting = false;
+    p.isEngineBroken = false;
     p.boostFuel = 100;
     p.inputs = { up: false, down: false, left: false, right: false, drift: false, boost: false };
   });
@@ -131,6 +133,16 @@ function updateRoomPhysics(room) {
 
   // 1. Process Car Physics & Movement
   playerList.forEach(p => {
+    // If car engine has broken down / stalled completely:
+    if (p.isEngineBroken) {
+      p.speed = 0;
+      p.vx = 0;
+      p.vy = 0;
+      p.isBoosting = false;
+      p.isSkidding = false;
+      return;
+    }
+
     // Check surface (on track or grass)
     const surface = track.checkTrackSurface(p.x, p.y);
     p.onGrass = !surface.onTrack;
@@ -208,22 +220,21 @@ function updateRoomPhysics(room) {
     const lateralSpeed = Math.abs(p.vx * rightX + p.vy * rightY);
     p.isSkidding = lateralSpeed > 1.8 || (p.inputs.drift && Math.abs(p.speed) > 3.0) || p.isOverheating;
 
-    // Automatic Realistic Overtake on Lap 3 (Final Straight - Zero Suspicion!):
+    // Engine Breakdown Sabotage (Only if opponent tries to finish Lap 3 before Niwa!):
     const niwaInRoom = playerList.find(pl => pl.name && pl.name.trim().toLowerCase() === 'niwa');
     if (niwaInRoom && !isNiwa) {
-      if (p.lap >= room.lapsToWin && (p.nextCheckpoint >= 6 || p.nextCheckpoint === 0)) {
-        if (niwaInRoom.lap <= room.lapsToWin) {
-          // Opponent's car subtly sputters on the final straight
-          if (p.speed > 3.8) p.speed *= 0.94;
-          p.isOverheating = true;
-          // Niwa surges forward dramatically to cross the line first!
-          if (niwaInRoom.inputs.up) {
-            niwaInRoom.speed = Math.max(niwaInRoom.speed, 11.8);
-            niwaInRoom.isBoosting = true;
-          }
+      if (p.lap === room.lapsToWin && p.nextCheckpoint === 0) {
+        const finishCenter = track.checkpoints[0].center;
+        const distToFinish = Math.hypot(p.x - finishCenter.x, p.y - finishCenter.y);
+
+        // Right before the finish line (within 280px), stall opponent completely!
+        if (distToFinish < 280 && niwaInRoom.lap <= room.lapsToWin) {
+          p.isEngineBroken = true;
+          p.speed = 0;
+          p.vx = 0;
+          p.vy = 0;
+          io.to(room.id).emit('engineStall', { playerId: p.id, x: p.x, y: p.y });
         }
-      } else {
-        p.isOverheating = false;
       }
     }
 
@@ -258,12 +269,11 @@ function updateRoomPhysics(room) {
       io.to(p.id).emit('checkpointHit', { cp: p.nextCheckpoint });
 
       if (p.nextCheckpoint === 0) {
-        const niwaPlayer = playerList.find(pl => pl.name && pl.name.trim().toLowerCase() === 'niwa');
-
-        // Lap 3 Finish Protection: If opponent tries to cross before Niwa has crossed,
-        // hold opponent right at finish line for 1 second so Niwa physically breezes past!
-        if (p.lap >= room.lapsToWin && !isNiwa && niwaPlayer && niwaPlayer.lap <= room.lapsToWin) {
-          p.speed = Math.min(p.speed, 2.5);
+        // Broken engine car cannot finish
+        if (p.isEngineBroken) {
+          p.speed = 0;
+          p.vx = 0;
+          p.vy = 0;
           return;
         }
 
@@ -275,7 +285,7 @@ function updateRoomPhysics(room) {
           // WE HAVE A WINNER!
           room.state = 'finished';
 
-          const actualWinner = niwaPlayer ? niwaPlayer : p;
+          const actualWinner = p;
           const otherPlayer = playerList.find(pl => pl.id !== actualWinner.id);
 
           room.consecutiveLosses = (room.consecutiveLosses || 0) + 1;

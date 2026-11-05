@@ -294,6 +294,11 @@
     soundFX.playCrash(data.intensity);
   });
 
+  socket.on('engineStall', (data) => {
+    soundFX.playCrash(1.2);
+    spawnSparks(data.x, data.y, 20);
+  });
+
   socket.on('raceFinished', (data) => {
     gameState = 'finished';
     winnerModal.style.display = 'flex';
@@ -377,6 +382,19 @@
       size: 4 + Math.random() * 4,
       alpha: 0.45,
       decay: 0.02
+    });
+  }
+
+  function spawnBlackSmoke(x, y) {
+    particles.push({
+      x: x + (Math.random() - 0.5) * 10,
+      y: y + (Math.random() - 0.5) * 10,
+      vx: (Math.random() - 0.5) * 1.5,
+      vy: -1.0 - Math.random() * 1.5,
+      size: 7 + Math.random() * 8,
+      alpha: 0.8,
+      decay: 0.025,
+      color: Math.random() > 0.4 ? 'rgba(30, 30, 35, ' : 'rgba(70, 70, 75, '
     });
   }
 
@@ -753,10 +771,19 @@
         p.nextCheckpoint = target.nextCheckpoint;
         p.isSkidding = target.isSkidding;
         p.isBoosting = target.isBoosting;
+        p.isEngineBroken = target.isEngineBroken;
         p.boostFuel = target.boostFuel;
         p.color = target.color;
         p.secondaryColor = target.secondaryColor;
         p.name = target.name;
+
+        // If engine broken down, spew black smoke and sparks!
+        if (target.isEngineBroken) {
+          const hoodX = p.x + Math.cos(p.angle) * 18;
+          const hoodY = p.y + Math.sin(p.angle) * 18;
+          spawnBlackSmoke(hoodX, hoodY);
+          spawnSparks(hoodX, hoodY, 1);
+        }
 
         // Boost flames
         if (p.isBoosting) {
@@ -820,6 +847,15 @@
       posValue.textContent = myPosition === 1 ? '1ST' : '2ND';
       posValue.className = `pos-badge pos-${myPosition}`;
 
+      // Breakdown Warning for player
+      const breakdownEl = document.getElementById('breakdown-alert');
+      if (me.isEngineBroken) {
+        if (breakdownEl) breakdownEl.style.display = 'block';
+        soundFX.updateEngine(0, 8.8, false);
+      } else {
+        if (breakdownEl) breakdownEl.style.display = 'none';
+      }
+
       // Boost Fuel Bar
       if (boostBar) {
         boostBar.style.width = `${me.boostFuel || 0}%`;
@@ -856,7 +892,8 @@
       if (pt.alpha <= 0) {
         particles.splice(i, 1);
       } else {
-        ctx.fillStyle = `rgba(200, 205, 215, ${pt.alpha})`;
+        const cPrefix = pt.color || 'rgba(200, 205, 215, ';
+        ctx.fillStyle = `${cPrefix}${pt.alpha})`;
         ctx.beginPath();
         ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
         ctx.fill();
